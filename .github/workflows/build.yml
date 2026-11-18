@@ -1,0 +1,64 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  native:
+    name: native build (x86_64 host)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build memlog interposer
+        run: |
+          gcc -shared -fPIC -Wall -Wextra -O2 \
+            -o tools/memlog.so tools/memlog.c -ldl
+
+      - name: Verify exported interposer symbols
+        run: |
+          nm -D tools/memlog.so | grep -E ' T (memmove|memset)$'
+          file tools/memlog.so
+
+      - name: Check shell scripts
+        run: bash -n scripts/*.sh
+
+      - name: Upload built artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: memlog-native
+          path: tools/memlog.so
+          if-no-files-found: error
+
+  loongarch64:
+    name: loongarch64 cross-compile check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cross compiler
+        id: cross
+        run: |
+          sudo apt-get update
+          if sudo apt-get install -y gcc-loongarch64-linux-gnu binutils-loongarch64-linux-gnu; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Cross toolchain unavailable in this runner image; skipping." >> "$GITHUB_STEP_SUMMARY"
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compile diagnostic source for LoongArch64
+        if: steps.cross.outputs.available == 'true'
+        run: |
+          loongarch64-linux-gnu-gcc -c -fPIC -Wall -Wextra -O2 \
+            -o /tmp/memlog-loongarch64.o tools/memlog.c
+
+      - name: Verify target architecture
+        if: steps.cross.outputs.available == 'true'
+        run: |
+          loongarch64-linux-gnu-readelf -h /tmp/memlog-loongarch64.o \
+            | grep -E 'Class:|Machine:'
+          loongarch64-linux-gnu-readelf -h /tmp/memlog-loongarch64.o \
+            | grep -q 'LoongArch'

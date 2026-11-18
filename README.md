@@ -1,5 +1,7 @@
 # vpu-h264-opt-loongarch64
 
+[![build](https://github.com/tsuibin/vpu-h264-opt-loongarch64/actions/workflows/build.yml/badge.svg)](https://github.com/tsuibin/vpu-h264-opt-loongarch64/actions/workflows/build.yml)
+
 H.264 hardware-decode optimization for the Loongson **LoongVPU** on
 loongarch64 (3B6000M / LG200, AOSC OS). This repo documents the measured
 root cause of poor H.264 VA-API throughput and the one switch that fixes it.
@@ -95,6 +97,8 @@ read-only with respect to the system; no sudo, no package changes.
 - `scripts/gen-test-clips.sh` — generate deterministic H.264 test clips.
 - `scripts/bench-h264.sh` — default vs zero-copy VAAPI benchmark.
 - `tools/memlog.c` — LD_PRELOAD interceptor for large memory operations.
+- `.github/workflows/build.yml` — on push/PR: native build of `memlog.so`,
+  symbol check, `bash -n` on scripts, and a LoongArch64 cross-compile check.
 
 ## Limitations
 
